@@ -1,2 +1,2 @@
 # LibraryManagement
-LibraryManagement in Java using JDBC
+Library Management in Java using JDBC
