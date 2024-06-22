@@ -50,7 +50,44 @@ class Book {
     }
 
     public void checkout(int b_id, int id, LocalDate checkout, LocalDate checkin) {
-        String query = "INSERT INTO transaction (b_id, id, checkout, checkin) VALUES (?, ?, ?, ?)";
+        // String query = "INSERT INTO transaction (b_id, id, checkout, checkin) VALUES (?, ?, ?, ?)";
+        String selectQuery = "SELECT q_avai FROM book WHERE b_id = ?";
+    String updateQuery = "UPDATE book SET q_avai = ? WHERE b_id = ?";
+    String insertTransactionQuery = "INSERT INTO transaction (b_id, id, checkout, checkin) VALUES (?, ?, ?, ?)";
+
+    try (Connection con = DriverManager.getConnection(url, userName, passWord);
+         PreparedStatement selectSt = con.prepareStatement(selectQuery);
+         PreparedStatement updateSt = con.prepareStatement(updateQuery);
+         PreparedStatement insertSt = con.prepareStatement(insertTransactionQuery)) {
+
+        // Start transaction
+        con.setAutoCommit(false);
+
+        // Get the current quantity available
+        selectSt.setInt(1, b_id);
+        ResultSet rs = selectSt.executeQuery();
+        int currentAvail = 0;
+        if (rs.next()) {
+            currentAvail = rs.getInt("q_avai");
+        } else {
+            throw new SQLException("Book not found with ID: " + b_id);
+        }
+        rs.close();
+
+        // Check if there are available copies
+        if (currentAvail <= 0) {
+            System.out.println("Sorry, no copies available for book ID: " + b_id);
+            return; // Exit method if no copies available
+        }
+
+        // Update the quantity available (decrement by 1)
+        updateSt.setInt(1, currentAvail - 1);
+        updateSt.setInt(2, b_id);
+        int rowsUpdated = updateSt.executeUpdate();
+        if (rowsUpdated != 1) {
+            throw new SQLException("Failed to update book availability for ID: " + b_id);
+        }
+
 
         try (Connection con = DriverManager.getConnection(url, userName, passWord);
              PreparedStatement st = con.prepareStatement(query)) {
