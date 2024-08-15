@@ -1,4 +1,5 @@
 
+package javaproject;
 
 import java.sql.*;
 import java.time.LocalDate;
@@ -50,44 +51,21 @@ class Book {
     }
 
     public void checkout(int b_id, int id, LocalDate checkout, LocalDate checkin) {
-        // String query = "INSERT INTO transaction (b_id, id, checkout, checkin) VALUES (?, ?, ?, ?)";
-        String selectQuery = "SELECT q_avai FROM book WHERE b_id = ?";
-    String updateQuery = "UPDATE book SET q_avai = ? WHERE b_id = ?";
-    String insertTransactionQuery = "INSERT INTO transaction (b_id, id, checkout, checkin) VALUES (?, ?, ?, ?)";
-
-    try (Connection con = DriverManager.getConnection(url, userName, passWord);
-         PreparedStatement selectSt = con.prepareStatement(selectQuery);
-         PreparedStatement updateSt = con.prepareStatement(updateQuery);
-         PreparedStatement insertSt = con.prepareStatement(insertTransactionQuery)) {
-
-        // Start transaction
-        con.setAutoCommit(false);
-
-        // Get the current quantity available
-        selectSt.setInt(1, b_id);
-        ResultSet rs = selectSt.executeQuery();
-        int currentAvail = 0;
-        if (rs.next()) {
-            currentAvail = rs.getInt("q_avai");
-        } else {
-            throw new SQLException("Book not found with ID: " + b_id);
-        }
-        rs.close();
-
-        // Check if there are available copies
-        if (currentAvail <= 0) {
-            System.out.println("Sorry, no copies available for book ID: " + b_id);
-            return; // Exit method if no copies available
+    	 
+        String updateBookCountQuery = "UPDATE book SET q_avai = q_avai - 1 WHERE b_id = ? AND q_avai > 0";
+        int updateRows=0;
+        try (Connection con = DriverManager.getConnection(url, userName, passWord);
+        		PreparedStatement updateBookCountSt = con.prepareStatement(updateBookCountQuery))
+        {
+        			updateBookCountSt.setInt(1, b_id);
+                    updateRows = updateBookCountSt.executeUpdate();
+        		}
+        catch (SQLException e) {
+            System.err.println("Error checking out book: " + e.getMessage());
         }
 
-        // Update the quantity available (decrement by 1)
-        updateSt.setInt(1, currentAvail - 1);
-        updateSt.setInt(2, b_id);
-        int rowsUpdated = updateSt.executeUpdate();
-        if (rowsUpdated != 1) {
-            throw new SQLException("Failed to update book availability for ID: " + b_id);
-        }
-
+    	if(updateRows>0) {
+        String query = "INSERT INTO transaction (b_id, id, checkout, checkin) VALUES (?, ?, ?, ?)";
 
         try (Connection con = DriverManager.getConnection(url, userName, passWord);
              PreparedStatement st = con.prepareStatement(query)) {
@@ -103,7 +81,32 @@ class Book {
         } catch (SQLException e) {
             System.err.println("Error checking out book: " + e.getMessage());
         }
+    	}
     }
+    public void checkin(int b_id, int id) {
+    	String updateBookCountQuery = "UPDATE book SET q_avai = q_avai + 1 WHERE b_id = ?";
+        int rows=0;
+
+        try (Connection con = DriverManager.getConnection(url, userName, passWord);
+            
+           PreparedStatement updateBookCountSt = con.prepareStatement(updateBookCountQuery)) {
+                updateBookCountSt.setInt(1, b_id);
+                rows=updateBookCountSt.executeUpdate();
+                if(rows>0)
+                {
+                	System.out.println("Successful checkin");
+                }
+            }
+        
+        
+        catch (SQLException e) {
+        System.err.println("Error checking out book: " + e.getMessage());
+         }
+
+    
+    
+    }
+    
 
     public void addUser(int id, String name) {
         String query = "INSERT INTO user (id, name) VALUES (?, ?)";
@@ -123,7 +126,7 @@ class Book {
     }
 }
 
-public class project {
+public class jdbc {
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
         boolean continueProgram = true;
@@ -136,7 +139,7 @@ public class project {
             System.out.println("2. Add new user");
             System.out.println("3. Display all books available");
             System.out.println("4. Book check-out");
-            System.out.println("5. Exit");
+            System.out.println("5. Book check-in");
             int choice = sc.nextInt();
 
             switch (choice) {
@@ -173,21 +176,28 @@ public class project {
                     b.checkout(bid, uid, currentdate, returndate);
                     break;
                 case 5:
-                    System.out.println("Do you want to exit? (yes/no)");
-                    String exitChoice = sc.next().toLowerCase();
-                    if (exitChoice.equals("yes")) {
-                        continueProgram = false;
-                        System.out.println("Exiting program...");
-                    }
+                	System.out.println("Enter the book id:");
+                    int bookid = sc.nextInt();
+                    System.out.println("Enter the user id:");
+                    int userid = sc.nextInt();
+                    b.checkin(bookid, userid);
                     break;
+                
+//                    System.out.println("Do you want to exit? (yes/no)");
+//                    String exitChoice = sc.next().toLowerCase();
+//                    if (exitChoice.equals("yes")) {
+//                        continueProgram = false;
+//                        System.out.println("Exiting program...");
+//                    }
+//                    break;
                 default:
                     System.out.println("Invalid choice. Please enter a number between 1 and 5.");
+                
             }
+            break;
         }
 
-        System.out.println("Press Enter to exit...");
-        sc.nextLine(); // Consume any leftover newline character
-        sc.nextLine(); // Wait for the user to press Enter to exit
+       
 
         sc.close();
     }
